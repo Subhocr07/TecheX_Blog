@@ -1,0 +1,53 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: blog_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - blog_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blog_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongo:27017/blog_management_db
+      - CLIENT_URL=http://localhost:5173
+      - JWT_ACCESS_SECRET=super_secret_jwt_access_key_min_32_characters_long
+      - JWT_REFRESH_SECRET=super_secret_jwt_refresh_key_min_32_characters_long
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+    depends_on:
+      - mongo
+    networks:
+      - blog_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blog_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - blog_network
+
+volumes:
+  mongo_data:
+
+networks:
+  blog_network:
+    driver: bridge
